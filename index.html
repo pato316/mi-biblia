@@ -238,6 +238,8 @@
     cursor:pointer;margin-top:8px;}
   .set-btn:active{background:var(--gold-soft);}
   .set-btn.solid{background:var(--gold);color:#fff;}
+  .set-btn.danger{border-color:#b85045;color:#b85045;background:var(--paper);}
+  .set-btn.danger:active{background:#f4dfdb;}
   .modal .close-x{float:right;font-size:24px;color:var(--ink-soft);cursor:pointer;
     background:none;border:none;line-height:1;}
   /* ---- BUSCAR ---- */
@@ -265,6 +267,7 @@
   .sr-ref{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:3px;}
   .sr-text{font-size:14.5px;line-height:1.5;color:var(--ink);}
   .sr-text mark{background:var(--hl);padding:0 1px;border-radius:2px;}
+  .note-card-text{font-size:15px;line-height:1.55;color:var(--ink);cursor:pointer;white-space:pre-wrap;}
   .note-box{width:100%;border-radius:12px;border:1.5px solid var(--gold-soft);background:var(--paper-2);
     padding:12px;font-family:inherit;font-size:15px;color:var(--ink);min-height:70px;resize:vertical;margin-top:8px;}
   .note-box:focus{outline:none;border-color:var(--gold);}
@@ -317,7 +320,7 @@ const STORE={
   load(){try{return JSON.parse(localStorage.getItem(this.k))||{};}catch(e){return {};}},
   save(d){localStorage.setItem(this.k,JSON.stringify(d));}
 };
-let state = Object.assign({ completed:[], highlights:{}, currentDay:1, chaptersRead:{}, lib:{book:null,chapter:null}, saved:[], editProgress:false, editLibrary:false, planTab:'tematico', yearDone:{}, fontSize:18.5, night:false, notes:{}, lastRead:null }, STORE.load());
+let state = Object.assign({ completed:[], highlights:{}, currentDay:1, chaptersRead:{}, lib:{book:null,chapter:null}, saved:[], editProgress:false, editLibrary:false, planTab:'tematico', yearDone:{}, fontSize:18.5, night:false, notes:{}, lastRead:null, destTab:'destacados' }, STORE.load());
 function persist(){ STORE.save(state); }
 function applyPrefs(){
   document.documentElement.style.setProperty('--verse-size', (state.fontSize||18.5)+'px');
@@ -643,7 +646,13 @@ function renderLectura(){
 
 function markDone(d){
   if(!state.completed.includes(d)) state.completed.push(d);
-  persist(); toast('¡Día '+d+' completado!');
+  // marcar también los capítulos en la sección Biblia
+  const p=PLAN.find(x=>x.day===d);
+  if(p){
+    state.chaptersRead[chKey(p.ref.book, p.ref.chapter)]=true;
+    if(p.ref.extraChapter) state.chaptersRead[chKey(p.ref.book, p.ref.extraChapter)]=true;
+  }
+  persist(); renderBiblia(); toast('¡Día '+d+' completado!');
   setTimeout(goNext,500);
 }
 function goNext(){
@@ -1017,31 +1026,87 @@ function backToYearPlan(){ state.planTab='anual'; libView='library'; switchScree
 function renderDestacados(){
   const el=document.getElementById('s-destacados');
   if(!el) return;
-  if(!state.saved.length){
-    el.innerHTML=`<div class="pad">
-      <h2 class="serif">Destacados</h2>
-      <p class="lead">Aún no tienes textos destacados.</p>
-      <div class="empty">
-        <p>Mientras lees, selecciona cualquier frase con el dedo y toca <b>✦ Destacar</b>.
-        Aparecerá aquí, y podrás volver a la lectura con un toque.</p>
-      </div>
+  const tab=state.destTab||'destacados';
+  const notes=Object.keys(state.notes||{}).filter(k=>(state.notes[k]||'').trim());
+  const tabs=`
+    <div class="plan-tabs">
+      <button class="${tab==='destacados'?'on':''}" onclick="setDestTab('destacados')">Destacados${state.saved.length?' · '+state.saved.length:''}</button>
+      <button class="${tab==='notas'?'on':''}" onclick="setDestTab('notas')">Mis notas${notes.length?' · '+notes.length:''}</button>
     </div>`;
-    return;
+
+  let body='';
+  if(tab==='destacados'){
+    if(!state.saved.length){
+      body=`<div class="empty">
+        <p>Aún no tienes textos destacados. Mientras lees, selecciona cualquier frase con el dedo y toca <b>✦ Destacar</b>.</p>
+      </div>`;
+    } else {
+      const items=state.saved.slice();
+      body=`<p class="lead">${items.length} texto${items.length>1?'s':''} guardado${items.length>1?'s':''}. Toca para volver a la lectura.</p>
+        ${items.map(it=>`
+          <div class="hl-card">
+            <div class="hl-quote serif" onclick="goToSource('${it.src}')">“${escapeHtml(it.text)}”</div>
+            <div class="hl-foot">
+              <span class="hl-ref" onclick="goToSource('${it.src}')">${escapeHtml(it.srcLabel)} →</span>
+              <button class="hl-del" onclick="removeHighlight(${it.id})" aria-label="Eliminar">✕</button>
+            </div>
+          </div>`).join('')}`;
+    }
+  } else {
+    if(!notes.length){
+      body=`<div class="empty">
+        <p>Aún no tienes notas. Mientras lees, escribe tus reflexiones en <b>Mi nota personal</b>, al pie de cada lectura. Aparecerán aquí.</p>
+      </div>`;
+    } else {
+      body=`<p class="lead">${notes.length} nota${notes.length>1?'s':''}. Toca una para ir al pasaje.</p>
+        ${notes.map(k=>{
+          const label=noteLabelFor(k);
+          const txt=state.notes[k];
+          const preview=txt.length>160?txt.slice(0,160)+'…':txt;
+          return `<div class="hl-card">
+            <div class="note-card-text" onclick="goToNote('${k.replace(/'/g,"\\'")}')">${escapeHtml(preview)}</div>
+            <div class="hl-foot">
+              <span class="hl-ref" onclick="goToNote('${k.replace(/'/g,"\\'")}')">${escapeHtml(label)} →</span>
+              <button class="hl-del" onclick="removeNote('${k.replace(/'/g,"\\'")}')" aria-label="Eliminar">✕</button>
+            </div>
+          </div>`;
+        }).join('')}`;
+    }
   }
-  // agrupar por fuente
-  const items=state.saved.slice();
-  el.innerHTML=`<div class="pad">
-    <h2 class="serif">Destacados</h2>
-    <p class="lead">${items.length} texto${items.length>1?'s':''} guardado${items.length>1?'s':''}. Toca para volver a la lectura.</p>
-    ${items.map(it=>`
-      <div class="hl-card">
-        <div class="hl-quote serif" onclick="goToSource('${it.src}')">“${escapeHtml(it.text)}”</div>
-        <div class="hl-foot">
-          <span class="hl-ref" onclick="goToSource('${it.src}')">${escapeHtml(it.srcLabel)} →</span>
-          <button class="hl-del" onclick="removeHighlight(${it.id})" aria-label="Eliminar">✕</button>
-        </div>
-      </div>`).join('')}
-  </div>`;
+  el.innerHTML=`<div class="pad"><h2 class="serif">Destacados y notas</h2>${tabs}${body}</div>`;
+}
+function setDestTab(t){ state.destTab=t; persist(); renderDestacados(); }
+
+// convierte una clave de nota en etiqueta legible
+function noteLabelFor(key){
+  if(key.startsWith('plannote|')){
+    const d=+key.split('|')[1];
+    const p=PLAN.find(x=>x.day===d);
+    return p? ('Plan · '+p.title) : ('Plan · día '+d);
+  }
+  if(key.startsWith('yearnote|')){
+    const i=+key.split('|')[1];
+    const d=PLAN_FULL[i];
+    if(d){ const lbl=d[1]===d[2]?`${d[0]} ${d[1]}`:`${d[0]} ${d[1]}–${d[2]}`; return 'Plan anual · '+lbl; }
+    return 'Plan anual';
+  }
+  // clave tipo "Libro|cap"
+  const parts=key.split('|');
+  if(parts.length===2) return parts[0]+' '+parts[1];
+  return key;
+}
+// navega al pasaje de una nota
+function goToNote(key){
+  if(key.startsWith('plannote|')){ openDay(+key.split('|')[1]); }
+  else if(key.startsWith('yearnote|')){ openYearDay(+key.split('|')[1]); }
+  else {
+    const parts=key.split('|');
+    if(parts.length===2) openChapter(parts[0], +parts[1]);
+  }
+}
+function removeNote(key){
+  delete state.notes[key]; persist(); renderDestacados();
+  toast('Nota eliminada');
 }
 function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -1105,6 +1170,11 @@ function openSettings(){
       <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)">
     </div>
     <div class="set-row">
+      <span class="lab">Reiniciar avance de lectura</span>
+      <div class="desc">Vuelve a 0 los capítulos y planes marcados como leídos. No borra notas ni destacados.</div>
+      <button class="set-btn danger" onclick="resetReadingProgress()">Reiniciar capítulos leídos</button>
+    </div>
+    <div class="set-row">
       <div class="desc" style="text-align:center;">Mi Biblia · Reina-Valera 1960<br>Tus datos se guardan solo en este dispositivo.</div>
     </div>`;
   m.classList.add('show');
@@ -1118,6 +1188,23 @@ function changeFont(delta){
 function toggleNight(){
   state.night=!state.night; persist(); applyPrefs();
   const t=document.querySelector('.toggle'); if(t) t.classList.toggle('on', state.night);
+}
+function resetReadingProgress(){
+  const ok=confirm('¿Reiniciar todos los capítulos leídos y planes completados? Tus notas y destacados se conservan.');
+  if(!ok) return;
+  state.chaptersRead={};
+  state.completed=[];
+  state.yearDone={};
+  state.currentDay=1;
+  state.lastRead=null;
+  state.editProgress=false;
+  state.editLibrary=false;
+  persist();
+  renderAll();
+  closeSettings();
+  switchScreen('lectura');
+  window.scrollTo(0,0);
+  toast('Avance reiniciado');
 }
 
 // ---------- RESPALDO ----------

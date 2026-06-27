@@ -1,4 +1,4 @@
-const CACHE='mibiblia-v15';
+const CACHE='mibiblia-v16';
 const ASSETS=['./','./index.html','./plan.js','./plan_full_a.js','./plan_full_b.js','./plan_full_c.js','./bible.json','./bible_index.json','./manifest.json','./icon-192.png','./icon-512.png','./icon-192-maskable.png','./icon-512-maskable.png'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
