@@ -313,6 +313,7 @@
 <script src="plan_full_a.js"></script>
 <script src="plan_full_b.js"></script>
 <script src="plan_full_c.js"></script>
+<script src="plan_full_guides.js"></script>
 <script>
 let BIBLE=null, INDEX=null;
 const STORE={
@@ -320,7 +321,7 @@ const STORE={
   load(){try{return JSON.parse(localStorage.getItem(this.k))||{};}catch(e){return {};}},
   save(d){localStorage.setItem(this.k,JSON.stringify(d));}
 };
-let state = Object.assign({ completed:[], highlights:{}, currentDay:1, chaptersRead:{}, lib:{book:null,chapter:null}, saved:[], editProgress:false, editLibrary:false, planTab:'tematico', yearDone:{}, fontSize:18.5, night:false, notes:{}, lastRead:null, destTab:'destacados' }, STORE.load());
+let state = Object.assign({ completed:[], highlights:{}, currentDay:1, chaptersRead:{}, lib:{book:null,chapter:null}, saved:[], editProgress:false, editLibrary:false, planTab:'tematico', selectedPhase:1, yearDone:{}, fontSize:18.5, night:false, notes:{}, lastRead:null, destTab:'destacados' }, STORE.load());
 function persist(){ STORE.save(state); }
 function applyPrefs(){
   document.documentElement.style.setProperty('--verse-size', (state.fontSize||18.5)+'px');
@@ -600,15 +601,19 @@ function renderLectura(){
         ${day.day<PLAN.length?`<button onclick="goNext()">Siguiente ›</button>`:'<span></span>'}
       </div>
 
+      <div class="section">
+        <h3>Resumen rápido</h3>
+        <p>${day.summary}</p>
+        <p>${day.message}</p>
+        <p>${day.context}</p>
+      </div>
+
       <div class="verses serif" id="verses">${vhtml}</div>
       <button class="btn-destacar" onclick="destacarSeleccion()">✦ Destacar texto seleccionado</button>
       <p class="hint-sel">Selecciona una frase con el dedo y luego toca el botón.</p>
 
       ${noteFieldHtml('plannote|'+day.day)}
 
-      <div class="section">
-        <h3>Resumen</h3><p>${day.summary}</p>
-      </div>
       <details id="expl">
         <summary>Explicación y contexto</summary>
         <div class="section" style="border:none;padding-top:8px;">
@@ -765,6 +770,8 @@ function renderPlan(){
       </div>`;
     });
     body=`<p class="lead">14 lecturas guiadas con explicación completa: la historia central y la vida de Jesús.</p>${html}`;
+  } else if(tab==='fases'){
+    body=renderPhasePlan();
   } else {
     body=renderYearPlan();
   }
@@ -772,13 +779,81 @@ function renderPlan(){
     <div class="pad">
       <h2 class="serif">Plan de lectura</h2>
       <div class="plan-tabs">
-        <button class="${tab==='tematico'?'on':''}" onclick="setPlanTab('tematico')">Temático · 14 días</button>
-        <button class="${tab==='anual'?'on':''}" onclick="setPlanTab('anual')">Toda la Biblia · 1 año</button>
+        <button class="${tab==='tematico'?'on':''}" onclick="setPlanTab('tematico')">Inicial · 14 días</button>
+        <button class="${tab==='fases'?'on':''}" onclick="setPlanTab('fases')">Fases</button>
+        <button class="${tab==='anual'?'on':''}" onclick="setPlanTab('anual')">Biblia completa</button>
       </div>
       ${body}
     </div>`;
 }
 function setPlanTab(t){ state.planTab=t; persist(); renderPlan(); }
+
+const PLAN_PHASES=[
+  { id:1, title:'Historia central de la Biblia', desc:'Las lecturas esenciales para entender creación, caída, pacto, promesa, Jesús y nueva vida.', type:'theme' },
+  { id:2, title:'Vida y mensaje de Jesús', desc:'Evangelios completos: nacimiento, ministerio, enseñanzas, cruz y resurrección.', books:['Mateo','Marcos','Lucas','Juan'] },
+  { id:3, title:'Historia de Israel', desc:'Desde Génesis hasta Ester: patriarcas, éxodo, ley, tierra, reyes, exilio y retorno.', books:['Génesis','Éxodo','Levítico','Números','Deuteronomio','Josué','Jueces','Rut','1 Samuel','2 Samuel','1 Reyes','2 Reyes','1 Crónicas','2 Crónicas','Esdras','Nehemías','Ester'] },
+  { id:4, title:'Iglesia y cartas apostólicas', desc:'Hechos, Romanos y las cartas: nacimiento de la iglesia, evangelio, comunidad y perseverancia.', books:['Hechos','Romanos','1 Corintios','2 Corintios','Gálatas','Efesios','Filipenses','Colosenses','1 Tesalonicenses','2 Tesalonicenses','1 Timoteo','2 Timoteo','Tito','Filemón','Hebreos','Santiago','1 Pedro','2 Pedro','1 Juan','2 Juan','3 Juan','Judas'] },
+  { id:5, title:'Profetas, sabiduría y Apocalipsis', desc:'Job, Salmos, sabiduría, profetas y Apocalipsis: adoración, esperanza, juicio y nueva creación.', books:['Job','Salmos','Proverbios','Eclesiastés','Cantares','Isaías','Jeremías','Lamentaciones','Ezequiel','Daniel','Oseas','Joel','Amós','Abdías','Jonás','Miqueas','Nahúm','Habacuc','Sofonías','Hageo','Zacarías','Malaquías','Apocalipsis'] },
+  { id:6, title:'Lectura completa y consolidación', desc:'Todas las lecturas del plan anual, de Génesis a Apocalipsis, para completar y repasar la Biblia entera.', all:true }
+];
+function phaseItems(phase){
+  if(phase.type==='theme') return PLAN.map(p=>({kind:'theme', day:p.day, title:p.title, label:p.ref.label, summary:p.summary, done:state.completed.includes(p.day)}));
+  return PLAN_FULL.map((d,i)=>({kind:'year', i, book:d[0], c1:d[1], c2:d[2], summary:d[3]}))
+    .filter(x=>phase.all || (phase.books||[]).includes(x.book))
+    .map(x=>Object.assign(x, {
+      title: x.c1===x.c2 ? `${x.book} ${x.c1}` : `${x.book} ${x.c1}–${x.c2}`,
+      label: x.c1===x.c2 ? `${x.book} ${x.c1}` : `${x.book} ${x.c1}–${x.c2}`,
+      done: !!state.yearDone[x.i]
+    }));
+}
+function renderPhasePlan(){
+  const selected=PLAN_PHASES.find(p=>p.id===state.selectedPhase) || PLAN_PHASES[0];
+  const cards=PLAN_PHASES.map(p=>{
+    const items=phaseItems(p);
+    const done=items.filter(x=>x.done).length;
+    const pct=items.length?((done/items.length)*100).toFixed(0):0;
+    return `<div class="lib-book ${p.id===selected.id?'full':''}" onclick="setSelectedPhase(${p.id})">
+      <div class="lib-top">
+        <span class="lib-name serif">Fase ${p.id}: ${p.title}</span>
+        <span class="lib-meta">${done}/${items.length}</span>
+      </div>
+      <div class="desc" style="margin:6px 0 8px;">${p.desc}</div>
+      <div class="progress-track" style="margin:0;"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  const items=phaseItems(selected);
+  let rows='';
+  items.forEach((it,idx)=>{
+    const n=it.kind==='theme'?it.day:(it.i+1);
+    const action=it.kind==='theme'?`openDay(${it.day})`:`openYearDay(${it.i})`;
+    rows+=`<div class="day-row" onclick="${action}">
+      <div class="day-num ${it.done?'done':''}">${it.done?'✓':(idx+1)}</div>
+      <div class="day-info"><div class="t serif">${it.title}</div><div class="r">${it.kind==='theme'?it.label:it.summary.slice(0,72)+'…'}</div></div>
+      <span style="color:var(--gold);">›</span>
+    </div>`;
+  });
+  const done=items.filter(x=>x.done).length;
+  const pct=items.length?((done/items.length)*100).toFixed(1):0;
+  return `
+    <p class="lead">Estas fases siguen el esquema de tutor bíblico: primero panorama, luego Jesús, Israel, iglesia, profetas/sabiduría y finalmente consolidación completa.</p>
+    <div class="lib-grid" style="margin-top:12px;">${cards}</div>
+    <div class="section">
+      <h3>Fase ${selected.id}: ${selected.title}</h3>
+      <p>${selected.desc}</p>
+      <div class="stat" style="margin-top:12px;">
+        <div><div class="lbl">Lecturas completadas</div><div class="big">${done} <span style="font-size:16px;color:var(--ink-soft);">/ ${items.length}</span></div></div>
+        <div style="text-align:right;"><div class="lbl">Avance de fase</div><div class="big">${pct}%</div></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>
+    ${rows}`;
+}
+function setSelectedPhase(id){
+  state.selectedPhase=id;
+  persist();
+  renderPlan();
+  window.scrollTo(0,0);
+}
 
 function renderYearPlan(){
   const total=PLAN_FULL.length;
@@ -814,9 +889,6 @@ function openYearDay(i){
   const d=PLAN_FULL[i];
   yearReading=i;
   state.lib.book=d[0]; state.lib.chapter=d[1]; libView='reader';
-  // marcar capítulos del rango como leídos
-  for(let c=d[1];c<=d[2];c++) state.chaptersRead[chKey(d[0],c)]=true;
-  state.yearDone[i]=true;
   state.lastRead={type:'year', i};
   persist();
   renderYearReader(i); switchScreen('biblia'); window.scrollTo(0,0);
@@ -987,6 +1059,9 @@ function renderYearReader(i){
   const book=d[0], c1=d[1], c2=d[2], summary=d[3];
   const src='year|'+i;
   const label = c1===c2? `${book} ${c1}` : `${book} ${c1}–${c2}`;
+  const guide=(typeof PLAN_FULL_GUIDES!=='undefined' && PLAN_FULL_GUIDES[i]) ? PLAN_FULL_GUIDES[i] : buildYearFallbackGuide(d, i);
+  const quickHtml=renderYearQuickSummary(guide, summary);
+  const guideDetailsHtml=renderYearGuideDetails(guide, summary);
   let vhtml='';
   for(let c=c1;c<=c2;c++){
     const chap=BIBLE[book] && BIBLE[book][String(c)];
@@ -999,26 +1074,125 @@ function renderYearReader(i){
   }
   const prev=i>0?i-1:null;
   const next=i<PLAN_FULL.length-1?i+1:null;
+  const isDone=!!state.yearDone[i];
   document.getElementById('s-biblia').innerHTML=`
     <div class="reading selectable" id="yearcont" data-src="${src}">
       <div class="back" onclick="backToYearPlan()">‹ Plan anual</div>
       <div class="eyebrow">Día ${i+1} de ${PLAN_FULL.length} · Plan anual</div>
       <h2 class="serif">${label}</h2>
       <div class="ref">Reina-Valera 1960</div>
-      <div class="reflect" style="margin:14px 0;">
-        <h3 style="font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--gold);margin:0 0 6px;">Resumen</h3>
-        <p style="margin:0;font-size:15px;line-height:1.6;">${summary}</p>
+      <div class="section">
+        <h3>Resumen rápido</h3>
+        ${quickHtml}
       </div>
       <div class="verses serif" id="yearverses">${vhtml}</div>
       <button class="btn-destacar" onclick="destacarSeleccion()">✦ Destacar texto seleccionado</button>
       <p class="hint-sel">Selecciona una frase con el dedo y luego toca el botón.</p>
       ${noteFieldHtml('yearnote|'+i)}
+      ${guideDetailsHtml}
+      <div class="toolbar">
+        <button onclick="toggleYearRead(${i})">${isDone?'Marcar como no leído':'Marcar leído ✓'}</button>
+      </div>
       <div class="reader-nav">
         ${prev!==null?`<button class="btn btn-ghost" style="margin:0;" onclick="openYearDay(${prev})">← Día ${prev+1}</button>`:'<span></span>'}
         ${next!==null?`<button class="btn btn-gold" style="margin:0;" onclick="openYearDay(${next})">Día ${next+1} →</button>`:'<span></span>'}
       </div>
     </div>`;
   paintSaved('yearcont', src);
+}
+function renderYearQuickSummary(g, fallbackSummary){
+  const parts=[];
+  if(g.summary) parts.push(g.summary);
+  else parts.push(fallbackSummary);
+  if(g.message && g.message!==parts[0]) parts.push(g.message);
+  if(g.context){
+    const ctx=Array.isArray(g.context)?g.context[0]:g.context;
+    if(ctx && !parts.includes(ctx)) parts.push(ctx);
+  }
+  return parts.slice(0,3).map(x=>`<p>${escapeHtml(x)}</p>`).join('');
+}
+function renderYearGuideDetails(g, fallbackSummary){
+  const p=val=>Array.isArray(val)
+    ? val.map(x=>`<p>${escapeHtml(x)}</p>`).join('')
+    : `<p>${escapeHtml(val||'')}</p>`;
+  const words=(g.words||[]).map(w=>`<p class="word"><b>${escapeHtml(w[0])}:</b> ${escapeHtml(w[1])}</p>`).join('');
+  const explanation=(g.explanation||[]).map((x,idx)=>{
+    if(Array.isArray(x)) return `<p><b>${idx+1}. ${escapeHtml(x[0])}</b></p><p>${escapeHtml(x[1])}</p>`;
+    return `<p>${escapeHtml(x)}</p>`;
+  }).join('');
+  return `
+    ${g.text?`<div class="section"><h3>${escapeHtml(g.textTitle||'Texto biblico')}</h3>${p(g.text)}</div>`:''}
+    <details id="year-expl">
+      <summary>Explicacion y contexto</summary>
+      ${g.context?`<div class="section" style="border:none;padding-top:8px;"><h3>Contexto historico y literario</h3>${p(g.context)}</div>`:''}
+      ${g.message?`<div class="section" style="border:none;padding-top:8px;"><h3>Mensaje principal</h3>${p(g.message)}</div>`:''}
+      ${explanation?`<div class="section" style="border:none;padding-top:8px;"><h3>Explicacion</h3>${explanation}</div>`:''}
+      ${words?`<div class="section" style="border:none;padding-top:8px;"><h3>Palabras importantes</h3>${words}</div>`:''}
+      ${g.connectionPrev?`<div class="section" style="border:none;padding-top:8px;"><h3>Conexion con lecturas anteriores</h3>${p(g.connectionPrev)}</div>`:''}
+      ${g.connectionJesus?`<div class="section" style="border:none;padding-top:8px;"><h3>Conexion con Jesus</h3>${p(g.connectionJesus)}</div>`:''}
+      ${g.practical?`<div class="section" style="border:none;padding-top:8px;"><h3>Leccion practica</h3>${p(g.practical)}</div>`:''}
+    </details>
+    ${g.reflection?`<div class="reflect"><h3 style="font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--gold);margin:0 0 6px;">Para reflexionar</h3><div class="q serif">${escapeHtml(g.reflection)}</div></div>`:''}`;
+}
+function bookContextInfo(book){
+  const groups=[
+    {books:['Génesis','Éxodo','Levítico','Números','Deuteronomio'], label:'Pentateuco', context:'Esta lectura pertenece al Pentateuco, la sección que presenta los orígenes, el pacto, la liberación de Israel y la formación del pueblo de Dios.', lens:'Observa cómo Dios crea, promete, libera, instruye y forma a su pueblo para vivir delante de él.'},
+    {books:['Josué','Jueces','Rut','1 Samuel','2 Samuel','1 Reyes','2 Reyes','1 Crónicas','2 Crónicas','Esdras','Nehemías','Ester'], label:'Historia de Israel', context:'Esta lectura pertenece a los libros históricos de Israel. Muestra cómo el pueblo vive, falla, recibe misericordia y aprende a depender de Dios en la tierra, el reino, el exilio o el retorno.', lens:'Observa la fidelidad de Dios en contraste con la fragilidad humana, el liderazgo, la obediencia y las consecuencias de apartarse del pacto.'},
+    {books:['Job','Salmos','Proverbios','Eclesiastés','Cantares'], label:'Sabiduría y poesía', context:'Esta lectura pertenece a la literatura poética y sapiencial. Estos libros enseñan a orar, sufrir, adorar, amar, discernir y vivir con sabiduría delante de Dios.', lens:'Observa qué enseña el texto sobre el corazón humano, la confianza, el temor de Dios y la vida cotidiana.'},
+    {books:['Isaías','Jeremías','Lamentaciones','Ezequiel','Daniel','Oseas','Joel','Amós','Abdías','Jonás','Miqueas','Nahúm','Habacuc','Sofonías','Hageo','Zacarías','Malaquías'], label:'Profetas', context:'Esta lectura pertenece a los profetas. Los profetas llaman al pueblo a volver a Dios, denuncian injusticia e idolatría, anuncian juicio y sostienen la esperanza de restauración.', lens:'Observa tanto la corrección de Dios como su promesa de restaurar, perdonar y cumplir sus propósitos.'},
+    {books:['Mateo','Marcos','Lucas','Juan'], label:'Evangelios', context:'Esta lectura pertenece a los Evangelios, que presentan la vida, enseñanza, muerte y resurrección de Jesús.', lens:'Observa qué revela el pasaje sobre la identidad de Jesús, el reino de Dios y la respuesta de fe que pide.'},
+    {books:['Hechos'], label:'Hechos', context:'Esta lectura pertenece a Hechos, el relato del nacimiento y expansión de la iglesia por el poder del Espíritu Santo.', lens:'Observa cómo el evangelio avanza, cómo Dios guía a su pueblo y cómo la iglesia da testimonio en medio de oposición.'},
+    {books:['Romanos','1 Corintios','2 Corintios','Gálatas','Efesios','Filipenses','Colosenses','1 Tesalonicenses','2 Tesalonicenses','1 Timoteo','2 Timoteo','Tito','Filemón','Hebreos','Santiago','1 Pedro','2 Pedro','1 Juan','2 Juan','3 Juan','Judas'], label:'Cartas apostólicas', context:'Esta lectura pertenece a las cartas apostólicas. Estas cartas explican el evangelio y enseñan cómo vivir como comunidad de Cristo.', lens:'Observa qué verdad sobre Dios se enseña, qué problema pastoral se corrige y qué práctica concreta se pide.'},
+    {books:['Apocalipsis'], label:'Apocalipsis', context:'Esta lectura pertenece a Apocalipsis, un libro profético y simbólico que consuela a la iglesia mostrando la victoria final de Dios y del Cordero.', lens:'Observa las imágenes principales sin perder el mensaje central: perseverar, adorar a Dios y confiar en la victoria final de Cristo.'}
+  ];
+  return groups.find(g=>g.books.includes(book)) || {label:'Lectura bíblica', context:'Esta lectura forma parte del desarrollo completo de la historia bíblica.', lens:'Observa qué revela el pasaje sobre Dios, el ser humano, la fe y la esperanza.'};
+}
+function buildYearFallbackGuide(d, i){
+  const book=d[0], c1=d[1], c2=d[2], summary=d[3];
+  const label=c1===c2?`${book} ${c1}`:`${book} ${c1}–${c2}`;
+  const info=bookContextInfo(book);
+  return {
+    summary,
+    context:[
+      `${label} forma parte de ${info.label}. ${info.context}`,
+      `Lee esta sección dentro del recorrido completo de la Biblia: cada lectura aporta una pieza al desarrollo de la creación, el pecado, el pacto, la promesa, Cristo, la iglesia y la nueva creación.`
+    ],
+    message:`La idea central de esta lectura es: ${summary}`,
+    explanation:[
+      [`Ubicación de la lectura`, `El pasaje se encuentra en ${label}. ${info.lens}`],
+      [`Movimiento principal`, summary],
+      [`Cómo leerlo`, `Busca quién actúa, qué problema aparece, cómo responde Dios y qué enseña esto sobre la fe, la obediencia, la gracia o la esperanza.`]
+    ],
+    connectionPrev:[
+      `Esta lectura se conecta con lo anterior porque continúa mostrando cómo Dios avanza su propósito aun en medio de obediencia, debilidad, pecado, juicio, restauración o esperanza.`,
+      `Si vienes leyendo en orden, fíjate qué tema se repite y qué elemento nuevo agrega este pasaje.`
+    ],
+    connectionJesus:[
+      `Lee esta sección a la luz de la historia completa que culmina en Jesús, evitando forzar símbolos. Pregunta cómo prepara, contrasta, promete o ilumina la obra de Cristo.`,
+      `Cuando el vínculo con Jesús sea explícito en el Nuevo Testamento, la app lo mostrará en guías más detalladas; aquí se mantiene una conexión general con la historia bíblica completa.`
+    ],
+    practical:[
+      `Resume la lectura en una frase y pregúntate qué revela sobre Dios y qué respuesta concreta pide de ti.`,
+      `Si el pasaje es difícil, empieza por la idea central antes de intentar resolver cada detalle.`
+    ],
+    reflection:`¿Qué idea principal de ${label} necesitas recordar hoy?`
+  };
+}
+function toggleYearRead(i){
+  const d=PLAN_FULL[i]; if(!d) return;
+  const book=d[0], c1=d[1], c2=d[2];
+  if(state.yearDone[i]){
+    delete state.yearDone[i];
+    for(let c=c1;c<=c2;c++) delete state.chaptersRead[chKey(book,c)];
+    toast('Lectura anual desmarcada');
+  } else {
+    state.yearDone[i]=true;
+    for(let c=c1;c<=c2;c++) state.chaptersRead[chKey(book,c)]=true;
+    toast('Lectura anual marcada como leída');
+  }
+  persist();
+  renderYearReader(i);
+  renderPlan();
 }
 function backToYearPlan(){ state.planTab='anual'; libView='library'; switchScreen('plan'); renderPlan(); window.scrollTo(0,0); }
 
