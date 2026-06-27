@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#b8893a">
+<title>Mi Biblia</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi Biblia">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --paper:#f7f3ea; --paper-2:#fffdf8; --ink:#2c2620; --ink-soft:#6b6256;
+    --gold:#b8893a; --gold-soft:#e8d9b8; --line:#e3dccb; --hl:#f6e27a;
+    --at:#9a7b4f; --nt:#7a6a8a; --verse-size:18.5px;
+  }
+  body.night{
+    --paper:#1a1714; --paper-2:#241f1a; --ink:#e8e1d4; --ink-soft:#a59a87;
+    --gold:#d4a857; --gold-soft:#4a3d23; --line:#352e26; --hl:#7a6320;
+    --at:#c9a978; --nt:#b0a0c0;
+  }
+  body.night .userhl{color:#fff;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    overscroll-behavior:none;}
+  body{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+  .serif{font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;}
+
+  header{padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--line);background:var(--paper);position:sticky;top:0;z-index:10;}
+  header h1{font-size:19px;font-weight:600;margin:0;letter-spacing:.3px;}
+  header .sub{font-size:12px;color:var(--ink-soft);margin-top:1px;}
+  .crest{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--gold);
+    display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:18px;}
+
+  main{flex:1;padding:0 0 80px;}
+  .screen{display:none;animation:fade .25s ease;}
+  .screen.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  /* ---- LECTURA ---- */
+  .reading{padding:22px 20px;}
+  .eyebrow{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);font-weight:600;}
+  .reading h2{font-size:26px;margin:6px 0 2px;font-weight:600;line-height:1.15;}
+  .ref{font-size:14px;color:var(--ink-soft);margin-bottom:18px;}
+  .verses{font-size:var(--verse-size,18.5px);line-height:1.78;}
+  .verses .v{cursor:pointer;}
+  .vn{font-size:11px;color:var(--gold);font-weight:700;vertical-align:super;margin-right:2px;
+    font-family:-apple-system,sans-serif;}
+  .hl{background:var(--hl);border-radius:3px;box-shadow:0 0 0 2px var(--hl);}
+
+  .section{margin-top:24px;border-top:1px solid var(--line);padding-top:16px;}
+  .section h3{font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--gold);
+    margin:0 0 8px;font-weight:700;}
+  .section p{margin:0 0 6px;font-size:15.5px;line-height:1.6;color:var(--ink);}
+  details{margin-top:10px;}
+  summary{font-size:16px;font-weight:600;color:var(--gold);cursor:pointer;
+    list-style:none;background:var(--paper-2);border:1.5px solid var(--gold-soft);
+    border-radius:12px;padding:15px 18px;margin-top:8px;display:flex;align-items:center;}
+  summary:active{background:var(--gold-soft);}
+  summary::-webkit-details-marker{display:none;}
+  summary::before{content:"+ ";color:var(--gold);font-size:20px;margin-right:8px;font-weight:700;}
+  details[open] summary::before{content:"– ";}
+  details[open] summary{border-radius:12px 12px 0 0;margin-bottom:0;}
+  .word{margin-bottom:8px;}
+  .word b{color:var(--at);}
+  .reflect{background:var(--paper-2);border:1px solid var(--gold-soft);border-radius:12px;
+    padding:14px 16px;margin-top:16px;}
+  .reflect .q{font-style:italic;font-size:16px;line-height:1.5;}
+
+  .btn{display:block;width:100%;padding:14px;border-radius:12px;border:none;font-size:15px;
+    font-weight:600;cursor:pointer;margin-top:20px;font-family:inherit;}
+  .btn-gold{background:var(--gold);color:#fff;}
+  .btn-gold:active{transform:scale(.985);}
+  .btn-ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink-soft);margin-top:10px;}
+  .toolbar{display:flex;gap:8px;margin:16px 0 4px;}
+  .toolbar button{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--line);
+    background:var(--paper-2);font-size:13px;font-weight:600;color:var(--ink-soft);font-family:inherit;cursor:pointer;}
+  .toolbar button:active{background:var(--gold-soft);}
+
+  /* ---- PROGRESO ---- */
+  .pad{padding:22px 20px;}
+  .pad h2{font-size:22px;margin:0 0 4px;font-weight:600;}
+  .pad .lead{font-size:14px;color:var(--ink-soft);margin:0 0 18px;}
+  .stat{background:var(--paper-2);border:1px solid var(--line);border-radius:14px;padding:16px;
+    margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;}
+  .stat .big{font-size:30px;font-weight:700;color:var(--gold);}
+  .stat .lbl{font-size:12px;color:var(--ink-soft);}
+  .progress-track{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px;}
+  .progress-fill{height:100%;background:var(--gold);border-radius:4px;transition:width .4s;}
+  .booklist h4{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);
+    margin:20px 0 8px;font-weight:700;}
+  .book-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);}
+  .book-row .name{flex:1;font-size:15px;}
+  .chips{display:flex;gap:3px;flex-wrap:wrap;max-width:130px;justify-content:flex-end;}
+  .chip{width:9px;height:9px;border-radius:2px;background:var(--line);}
+  .chip.read{background:var(--gold);}
+  .book-row .frac{font-size:12px;color:var(--ink-soft);min-width:42px;text-align:right;}
+
+  /* ---- RESUMEN ---- */
+  .act{border-left:4px solid;border-radius:0 12px 12px 0;background:var(--paper-2);
+    padding:14px 16px;margin-bottom:10px;}
+  .act h3{margin:0 0 3px;font-size:17px;font-weight:600;}
+  .act p{margin:0 0 4px;font-size:14px;color:var(--ink);line-height:1.45;}
+  .act .bk{font-size:12px;color:var(--ink-soft);font-weight:600;}
+
+  /* ---- PLAN ---- */
+  .plan-tabs{display:flex;gap:8px;margin:6px 0 16px;}
+  .plan-tabs button{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--line);
+    background:var(--paper-2);color:var(--ink-soft);font-family:inherit;font-size:13px;
+    font-weight:600;cursor:pointer;}
+  .plan-tabs button.on{background:var(--gold);color:#fff;border-color:var(--gold);}
+  .day-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);cursor:pointer;}
+  .day-num{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;
+    justify-content:center;font-size:14px;font-weight:700;background:var(--paper-2);
+    border:1.5px solid var(--line);color:var(--ink-soft);}
+  .day-num.done{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .day-num.current{border-color:var(--gold);color:var(--gold);}
+  .day-info{flex:1;}
+  .day-info .t{font-size:15.5px;font-weight:600;}
+  .day-info .r{font-size:12.5px;color:var(--ink-soft);}
+  .phase-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);
+    font-weight:700;margin:18px 0 4px;}
+
+  /* ---- NAV ---- */
+  nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;
+    background:var(--paper-2);border-top:1px solid var(--line);display:flex;
+    padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:20;}
+  nav button{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;
+    gap:2px;font-size:9px;color:var(--ink-soft);font-family:inherit;cursor:pointer;padding:4px 1px;}
+  nav button.active{color:var(--gold);}
+  nav .ico{font-size:18px;line-height:1;}
+
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--ink);
+    color:#fff;padding:11px 20px;border-radius:24px;font-size:14px;opacity:0;transition:opacity .3s;
+    pointer-events:none;z-index:30;white-space:nowrap;}
+  .toast.show{opacity:1;}
+
+  /* ---- BIBLIA (lectura libre) ---- */
+  .lib-grid{display:flex;flex-direction:column;gap:0;}
+  .lib-book{display:block;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .lib-book:active{background:var(--gold-soft);}
+  .lib-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+  .lib-name{font-size:16px;}
+  .lib-meta{font-size:12.5px;color:var(--ink-soft);font-weight:600;}
+  .lib-book.full .lib-meta{color:var(--gold);}
+  .lib-book .chips{max-width:100%;justify-content:flex-start;gap:4px;}
+  .chip-more{font-size:10px;color:var(--ink-soft);align-self:center;margin-left:2px;}
+  .ch-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:14px;}
+  .ch-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:9px;
+    background:var(--paper-2);border:1.5px solid var(--line);font-size:14px;font-weight:600;
+    color:var(--ink-soft);cursor:pointer;}
+  .ch-cell:active{transform:scale(.94);}
+  .ch-cell.read{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .ch-cell.editing{position:relative;}
+  .ch-cell.editing.read{box-shadow:0 0 0 2px var(--coral,#d85a30);}
+  .ch-x{position:absolute;top:-6px;right:-6px;background:#d85a30;color:#fff;border-radius:50%;
+    width:16px;height:16px;font-size:10px;display:flex;align-items:center;justify-content:center;}
+  .btn-edit{display:inline-flex;align-items:center;gap:4px;margin:14px 0 4px;padding:9px 16px;
+    border-radius:20px;border:1.5px solid var(--gold);background:var(--paper-2);color:var(--gold);
+    font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-edit.on{background:var(--gold);color:#fff;}
+  .btn-edit:active{opacity:.8;}
+  .edit-tag{font-size:10px;background:var(--gold-soft);color:var(--at);padding:2px 7px;
+    border-radius:10px;font-weight:700;vertical-align:middle;}
+  .lib-book.editable{background:var(--paper-2);}
+  .back{font-size:14px;color:var(--gold);font-weight:600;cursor:pointer;margin-bottom:10px;}
+  .reader-nav{display:flex;gap:10px;margin-top:22px;}
+  .reader-nav button{flex:1;}
+  .reader-nav span{flex:1;}
+  .act-tap{cursor:pointer;}
+  .act-tap:active{background:var(--gold-soft);}
+  .act-foot{display:flex;justify-content:space-between;align-items:center;margin-top:4px;flex-wrap:wrap;gap:4px;}
+  .act-go{font-size:12px;color:var(--gold);font-weight:700;}
+
+  /* ---- SELECCIÓN Y DESTACADOS ---- */
+  .selectable{-webkit-user-select:text;user-select:text;}
+  .verses .v{cursor:text;}
+  mark.userhl{background:var(--hl);color:inherit;border-radius:3px;
+    box-shadow:0 0 0 2px var(--hl);}
+  .hint-sel{font-size:12px;color:var(--ink-soft);margin:8px 0 0;font-style:italic;text-align:center;}
+  .btn-destacar{display:block;width:100%;margin-top:14px;padding:13px;border-radius:12px;
+    border:1.5px solid var(--gold);background:var(--gold-soft);color:var(--at);
+    font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+  .btn-destacar:active{background:var(--gold);color:#fff;}
+  .sel-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+    width:100%;max-width:520px;background:var(--ink);display:flex;align-items:center;gap:10px;
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));z-index:60;
+    transition:transform .22s ease;box-shadow:0 -4px 16px rgba(0,0,0,.15);}
+  .sel-bar.show{transform:translateX(-50%) translateY(0);}
+  .sel-bar .sel-preview{flex:1;color:#d8cfc0;font-size:13px;font-style:italic;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sel-bar .sel-save{background:var(--gold);border:none;color:#fff;font-family:inherit;
+    font-size:15px;font-weight:700;padding:12px 20px;cursor:pointer;border-radius:10px;flex-shrink:0;}
+  .sel-bar .sel-save:active{background:#a0762f;}
+  .hl-card{background:var(--paper-2);border:1px solid var(--gold-soft);border-radius:12px;
+    padding:14px 16px;margin-bottom:12px;}
+  .hl-quote{font-size:16.5px;line-height:1.55;cursor:pointer;color:var(--ink);}
+  .hl-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;}
+  .hl-ref{font-size:12.5px;color:var(--gold);font-weight:700;cursor:pointer;}
+  .hl-del{background:none;border:none;color:var(--ink-soft);font-size:15px;cursor:pointer;
+    padding:4px 8px;border-radius:8px;}
+  .hl-del:active{background:var(--line);}
+  .empty{background:var(--paper-2);border:1px dashed var(--gold-soft);border-radius:12px;
+    padding:18px;margin-top:14px;}
+  .empty p{font-size:14px;line-height:1.6;color:var(--ink-soft);margin:0;}
+  .rev-h{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);
+    margin:24px 0 2px;font-weight:700;}
+  /* ---- AJUSTES / MODAL ---- */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;
+    align-items:flex-end;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--paper);width:100%;max-width:520px;border-radius:18px 18px 0 0;
+    padding:22px 20px calc(22px + env(safe-area-inset-bottom));max-height:85vh;overflow-y:auto;
+    animation:slideUp .25s ease;}
+  @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+  .modal h2{font-size:20px;margin:0 0 4px;}
+  .modal .set-row{padding:16px 0;border-bottom:1px solid var(--line);}
+  .modal .set-row:last-child{border-bottom:none;}
+  .set-row .lab{font-size:15px;font-weight:600;margin-bottom:10px;display:block;}
+  .set-row .desc{font-size:13px;color:var(--ink-soft);margin:2px 0 10px;}
+  .size-ctrl{display:flex;align-items:center;gap:14px;}
+  .size-ctrl button{width:44px;height:44px;border-radius:12px;border:1.5px solid var(--gold);
+    background:var(--paper-2);color:var(--gold);font-size:20px;font-weight:700;cursor:pointer;}
+  .size-ctrl .val{flex:1;text-align:center;font-size:15px;color:var(--ink-soft);}
+  .toggle{position:relative;width:52px;height:30px;border-radius:15px;background:var(--line);
+    border:none;cursor:pointer;transition:background .2s;flex-shrink:0;}
+  .toggle.on{background:var(--gold);}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;
+    border-radius:50%;background:#fff;transition:left .2s;}
+  .toggle.on::after{left:25px;}
+  .row-flex{display:flex;align-items:center;justify-content:space-between;}
+  .set-btn{display:block;width:100%;padding:13px;border-radius:12px;border:1.5px solid var(--gold);
+    background:var(--paper-2);color:var(--gold);font-family:inherit;font-size:15px;font-weight:700;
+    cursor:pointer;margin-top:8px;}
+  .set-btn:active{background:var(--gold-soft);}
+  .set-btn.solid{background:var(--gold);color:#fff;}
+  .modal .close-x{float:right;font-size:24px;color:var(--ink-soft);cursor:pointer;
+    background:none;border:none;line-height:1;}
+  /* ---- BUSCAR ---- */
+  .day-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    margin:0 0 18px;padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .day-nav button{background:none;border:none;color:var(--gold);font-family:inherit;
+    font-size:14px;font-weight:700;cursor:pointer;padding:4px 8px;}
+  .day-nav button:active{opacity:.6;}
+  .day-nav-mid{font-size:12px;color:var(--ink-soft);font-weight:600;}
+  .resume-card{display:flex;align-items:center;justify-content:space-between;
+    background:var(--gold-soft);border:1.5px solid var(--gold);border-radius:14px;
+    padding:14px 16px;margin-bottom:18px;cursor:pointer;}
+  .resume-card:active{opacity:.85;}
+  .rc-sub{font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--gold);font-weight:700;}
+  .rc-title{font-size:18px;color:var(--ink);margin-top:2px;}
+  .rc-arrow{font-size:22px;color:var(--gold);}
+  .search-box{display:flex;gap:8px;margin-bottom:16px;}
+  .search-box input{flex:1;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);
+    background:var(--paper-2);color:var(--ink);font-family:inherit;font-size:16px;}
+  .search-box input:focus{outline:none;border-color:var(--gold);}
+  .search-box button{padding:13px 18px;border-radius:12px;border:none;background:var(--gold);
+    color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+  .sr-item{padding:13px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .sr-item:active{background:var(--gold-soft);}
+  .sr-ref{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:3px;}
+  .sr-text{font-size:14.5px;line-height:1.5;color:var(--ink);}
+  .sr-text mark{background:var(--hl);padding:0 1px;border-radius:2px;}
+  .note-box{width:100%;border-radius:12px;border:1.5px solid var(--gold-soft);background:var(--paper-2);
+    padding:12px;font-family:inherit;font-size:15px;color:var(--ink);min-height:70px;resize:vertical;margin-top:8px;}
+  .note-box:focus{outline:none;border-color:var(--gold);}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1 class="serif">Mi Biblia</h1>
+    <div class="sub" id="header-sub">Reina-Valera 1960</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="crest serif" onclick="openSearch()" title="Buscar" style="cursor:pointer;background:none;">🔍</button>
+    <button class="crest serif" onclick="openSettings()" title="Ajustes" style="cursor:pointer;background:none;">⚙</button>
+  </div>
+</header>
+
+<main>
+  <section class="screen active" id="s-lectura"></section>
+  <section class="screen" id="s-biblia"></section>
+  <section class="screen" id="s-destacados"></section>
+  <section class="screen" id="s-resumen"></section>
+  <section class="screen" id="s-plan"></section>
+  <section class="screen" id="s-buscar"></section>
+</main>
+
+<div class="modal-overlay" id="settings-modal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal" id="settings-body"></div>
+</div>
+
+<nav>
+  <button class="active" data-s="lectura"><span class="ico">📖</span>Lectura</button>
+  <button data-s="biblia"><span class="ico">📚</span>Biblia</button>
+  <button data-s="destacados"><span class="ico">✦</span>Destacados</button>
+  <button data-s="resumen"><span class="ico">❖</span>Resumen</button>
+  <button data-s="plan"><span class="ico">▤</span>Plan</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script src="plan.js"></script>
+<script src="plan_full_a.js"></script>
+<script src="plan_full_b.js"></script>
+<script src="plan_full_c.js"></script>
+<script>
+let BIBLE=null, INDEX=null;
+const STORE={
+  get k(){return 'biblia_v1';},
+  load(){try{return JSON.parse(localStorage.getItem(this.k))||{};}catch(e){return {};}},
+  save(d){localStorage.setItem(this.k,JSON.stringify(d));}
+};
+let state = Object.assign({ completed:[], highlights:{}, currentDay:1, chaptersRead:{}, lib:{book:null,chapter:null}, saved:[], editProgress:false, editLibrary:false, planTab:'tematico', yearDone:{}, fontSize:18.5, night:false, notes:{}, lastRead:null }, STORE.load());
+function persist(){ STORE.save(state); }
+function applyPrefs(){
+  document.documentElement.style.setProperty('--verse-size', (state.fontSize||18.5)+'px');
+  document.body.classList.toggle('night', !!state.night);
+}
+
+async function boot(){
+  const [b,i]=await Promise.all([
+    fetch('bible.json').then(r=>r.json()),
+    fetch('bible_index.json').then(r=>r.json())
+  ]);
+  BIBLE=b; INDEX=i;
+  applyPrefs();
+  renderAll();
+  setupSelection();
+}
+boot();
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1900);
+}
+
+// ---------- DESTACADOS (selección de texto) ----------
+// Un destacado: {id, src, srcLabel, text, ts}
+//  src: 'plan|<day>' o 'lib|<book>|<ch>'  -> permite volver a la lectura
+
+function srcLabelFor(src){
+  if(src.startsWith('plan|')){
+    const d=+src.split('|')[1];
+    const p=PLAN.find(x=>x.day===d);
+    return p ? ('Día '+d+' · '+p.title+' ('+p.ref.label+')') : ('Día '+d);
+  }
+  if(src.startsWith('lib|')){
+    const [,book,ch]=src.split('|');
+    return book+' '+ch;
+  }
+  if(src.startsWith('year|')){
+    const i=+src.split('|')[1];
+    const d=PLAN_FULL[i];
+    if(d){ const label=d[1]===d[2]?`${d[0]} ${d[1]}`:`${d[0]} ${d[1]}–${d[2]}`; return 'Plan anual · '+label; }
+    return 'Plan anual';
+  }
+  return src;
+}
+
+let pendingSel=null; // {text, src} última selección válida detectada
+let lastSelText='', lastSelSrc='';
+
+function setupSelection(){
+  document.addEventListener('mouseup', captureSelection);
+  document.addEventListener('touchend', captureSelection);
+  document.addEventListener('selectionchange', captureSelection);
+}
+
+// Guarda la última selección válida (sin depender de mostrar barra)
+function captureSelection(){
+  const sel=window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return;
+  const text=sel.toString().trim();
+  if(text.length<2) return;
+  const range=sel.getRangeAt(0);
+  let node=range.commonAncestorContainer;
+  if(node.nodeType===3) node=node.parentElement;
+  const container=node.closest && node.closest('.selectable');
+  if(!container) return;
+  lastSelText=text;
+  lastSelSrc=container.dataset.src;
+}
+
+// Llamado por el botón fijo "Destacar"
+function destacarSeleccion(){
+  // intentar leer la selección viva primero
+  const sel=window.getSelection();
+  let text='', src='';
+  if(sel && !sel.isCollapsed && sel.rangeCount){
+    const t=sel.toString().trim();
+    const range=sel.getRangeAt(0);
+    let node=range.commonAncestorContainer;
+    if(node.nodeType===3) node=node.parentElement;
+    const container=node.closest && node.closest('.selectable');
+    if(t.length>=2 && container){ text=t; src=container.dataset.src; }
+  }
+  // si no hay selección viva, usar la última capturada
+  if(!text && lastSelText){ text=lastSelText; src=lastSelSrc; }
+  if(!text){ toast('Primero selecciona un texto'); return; }
+  saveHighlight(text, src);
+  lastSelText=''; lastSelSrc='';
+  const s=window.getSelection(); if(s) s.removeAllRanges();
+}
+// compatibilidad con llamadas viejas
+function hideSelBar(){}
+function showSelBar(){}
+function doSavePending(){ destacarSeleccion(); }
+
+function saveHighlight(text, src){
+  const clean=text.replace(/\s+/g,' ').trim();
+  // evitar duplicado exacto
+  if(state.saved.some(s=>s.src===src && s.text===clean)){ toast('Ya estaba destacado'); return; }
+  state.saved.unshift({ id:Date.now(), src, srcLabel:srcLabelFor(src), text:clean, ts:Date.now() });
+  persist();
+  paintAllVisible();
+  toast('Texto destacado ✦');
+  renderDestacados();
+}
+function removeHighlight(id){
+  state.saved=state.saved.filter(s=>s.id!==id);
+  persist(); paintAllVisible(); renderDestacados();
+  toast('Destacado eliminado');
+}
+
+// pinta los destacados guardados sobre el texto de un contenedor
+function paintSaved(containerId, src){
+  const cont=document.getElementById(containerId);
+  if(!cont) return;
+  const items=state.saved.filter(s=>s.src===src);
+  const verses=cont.querySelector('#verses, #libverses');
+  items.forEach(it=>{
+    // intentar primero en el texto bíblico; si no está ahí, en todo el contenedor
+    let done=false;
+    if(verses) done=highlightTextIn(verses, it.text);
+    if(!done) highlightTextIn(cont, it.text);
+  });
+}
+function paintAllVisible(){
+  // re-render de la pantalla activa para repintar limpio
+  const active=document.querySelector('.screen.active');
+  if(!active) return;
+  if(active.id==='s-lectura') renderLectura();
+  else if(active.id==='s-biblia' && libView==='reader') renderReader();
+}
+
+// resalta la primera aparición de `needle` dentro de `container` envolviéndola en <mark>
+// devuelve true si logró marcar, false si no encontró el texto
+function highlightTextIn(container, needle){
+  if(!needle) return false;
+  const target=needle.replace(/\s+/g,' ').trim();
+  if(!target) return false;
+  const walker=document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+  const nodes=[]; let n;
+  while(n=walker.nextNode()) nodes.push(n);
+  // texto plano + posiciones acumuladas (con normalización de espacios consistente)
+  let full='';
+  const segs=[]; // {node, start, raw}
+  nodes.forEach(tn=>{
+    const raw=tn.nodeValue;
+    segs.push({node:tn, start:full.length, raw});
+    full+=raw;
+  });
+  const fullN=full.replace(/\s+/g,' ');
+  const pos=fullN.indexOf(target);
+  if(pos<0) return false;
+  // mapear posición normalizada -> posición real
+  const realStart=normToReal(full, pos);
+  const realEnd=normToReal(full, pos+target.length);
+  if(realStart<0||realEnd<0) return false;
+  const s=locate(segs, realStart), e=locate(segs, realEnd);
+  if(!s||!e) return false;
+  try{
+    const range=document.createRange();
+    range.setStart(s.node, s.offset);
+    range.setEnd(e.node, e.offset);
+    const mark=document.createElement('mark');
+    mark.className='userhl';
+    range.surroundContents(mark);
+    return true;
+  }catch(err){
+    // la selección cruza límites de etiqueta (varios versículos): marcar por extractContents
+    try{
+      const range=document.createRange();
+      range.setStart(s.node, s.offset);
+      range.setEnd(e.node, e.offset);
+      const frag=range.extractContents();
+      const mark=document.createElement('mark');
+      mark.className='userhl';
+      mark.appendChild(frag);
+      range.insertNode(mark);
+      return true;
+    }catch(e2){ return false; }
+  }
+}
+// convierte un índice en el string normalizado a índice en el string real
+function normToReal(full, normIdx){
+  let count=0, prevSpace=false;
+  for(let i=0;i<full.length;i++){
+    const isSpace=/\s/.test(full[i]);
+    const collapsed = isSpace && prevSpace;
+    if(!collapsed){
+      if(count===normIdx) return i;
+      count++;
+    }
+    prevSpace=isSpace;
+  }
+  return count===normIdx ? full.length : -1;
+}
+function locate(segs, realIdx){
+  for(let i=segs.length-1;i>=0;i--){
+    if(realIdx>=segs[i].start){
+      return { node:segs[i].node, offset:Math.min(realIdx-segs[i].start, segs[i].raw.length) };
+    }
+  }
+  return segs.length? {node:segs[0].node, offset:0} : null;
+}
+function findNodePos(){return null;}
+function fallbackMark(){}
+
+// ---------- obtener versículos de un pasaje ----------
+function getVerses(ref){
+  const out=[];
+  const book=BIBLE[ref.book]; if(!book) return out;
+  const ch=book[String(ref.chapter)]; if(!ch) return out;
+  for(let v=ref.vStart; v<=ref.vEnd; v++){
+    if(ch[String(v)]) out.push({n:v, text:ch[String(v)], ch:ref.chapter});
+  }
+  // pasaje que cruza a otro capítulo (ej Génesis 1:1–2:3)
+  if(ref.extraChapter){
+    const ch2=book[String(ref.extraChapter)];
+    if(ch2) for(let v=1; v<=ref.extraEnd; v++){
+      if(ch2[String(v)]) out.push({n:v, text:ch2[String(v)], ch:ref.extraChapter});
+    }
+  }
+  return out;
+}
+
+// ---------- LECTURA ----------
+// tarjeta "retomar donde me quedé"
+function resumeCardHtml(){
+  const lr=state.lastRead;
+  if(!lr) return '';
+  let label='', sub='';
+  if(lr.type==='lib'){ label=`${lr.book} ${lr.ch}`; sub='Lectura libre'; }
+  else if(lr.type==='year'){ const d=PLAN_FULL[lr.i]; if(!d) return ''; label=d[1]===d[2]?`${d[0]} ${d[1]}`:`${d[0]} ${d[1]}–${d[2]}`; sub='Plan anual'; }
+  else if(lr.type==='plan'){ const p=PLAN.find(x=>x.day===lr.day); if(!p) return ''; label=p.title; sub='Plan temático'; }
+  else return '';
+  return `<div class="resume-card" onclick="resumeReading()">
+    <div><div class="rc-sub">Continuar leyendo · ${sub}</div>
+      <div class="rc-title serif">${label}</div></div>
+    <span class="rc-arrow">→</span>
+  </div>`;
+}
+function resumeReading(){
+  const lr=state.lastRead; if(!lr) return;
+  if(lr.type==='lib') openChapter(lr.book, lr.ch);
+  else if(lr.type==='year') openYearDay(lr.i);
+  else if(lr.type==='plan') openDay(lr.day);
+}
+
+function renderLectura(){
+  const day = PLAN.find(p=>p.day===state.currentDay) || PLAN[0];
+  const verses = getVerses(day.ref);
+  const srcId = 'plan|'+day.day;
+  const isDone = state.completed.includes(day.day);
+
+  let vhtml='';
+  let lastCh=null;
+  verses.forEach((v,idx)=>{
+    if(day.ref.extraChapter && v.ch!==lastCh){
+      vhtml+=`<div class="eyebrow" style="margin-top:10px;">Capítulo ${v.ch}</div>`;
+      lastCh=v.ch;
+    }
+    vhtml+=`<span class="v" data-i="${idx}"><span class="vn">${v.n}</span>${v.text} </span>`;
+  });
+
+  const words = day.words.map(w=>`<p class="word"><b>${w[0]}:</b> ${w[1]}</p>`).join('');
+
+  document.getElementById('s-lectura').innerHTML=`
+    ${resumeCardHtml()}
+    <div class="reading selectable" id="reading-cont" data-src="${srcId}">
+      <div class="eyebrow">Día ${day.day} · ${day.phase}</div>
+      <h2 class="serif">${day.title}</h2>
+      <div class="ref">${day.ref.label} · Reina-Valera 1960</div>
+
+      <div class="day-nav">
+        ${day.day>1?`<button onclick="goPrev()">‹ Anterior</button>`:'<span></span>'}
+        <span class="day-nav-mid">Día ${day.day} de ${PLAN.length}</span>
+        ${day.day<PLAN.length?`<button onclick="goNext()">Siguiente ›</button>`:'<span></span>'}
+      </div>
+
+      <div class="verses serif" id="verses">${vhtml}</div>
+      <button class="btn-destacar" onclick="destacarSeleccion()">✦ Destacar texto seleccionado</button>
+      <p class="hint-sel">Selecciona una frase con el dedo y luego toca el botón.</p>
+
+      ${noteFieldHtml('plannote|'+day.day)}
+
+      <div class="section">
+        <h3>Resumen</h3><p>${day.summary}</p>
+      </div>
+      <details id="expl">
+        <summary>Explicación y contexto</summary>
+        <div class="section" style="border:none;padding-top:8px;">
+          <h3>Contexto histórico y literario</h3><p>${day.context}</p>
+        </div>
+        <div class="section" style="border:none;padding-top:8px;">
+          <h3>Mensaje principal</h3><p>${day.message}</p>
+        </div>
+        <div class="section" style="border:none;padding-top:8px;">
+          <h3>Explicación</h3><p>${day.explanation}</p>
+        </div>
+        <div class="section" style="border:none;padding-top:8px;">
+          <h3>Palabras importantes</h3>${words}
+        </div>
+        ${day.connectionPrev?`<div class="section" style="border:none;padding-top:8px;"><h3>Conexión con lecturas anteriores</h3><p>${day.connectionPrev}</p></div>`:''}
+        ${day.connectionJesus?`<div class="section" style="border:none;padding-top:8px;"><h3>Conexión con Jesús</h3><p>${day.connectionJesus}</p></div>`:''}
+        <div class="section" style="border:none;padding-top:8px;">
+          <h3>Lección práctica</h3><p>${day.practical}</p>
+        </div>
+      </details>
+
+      <div class="reflect">
+        <h3 style="font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--gold);margin:0 0 6px;">Para reflexionar</h3>
+        <div class="q serif">${day.reflection}</div>
+      </div>
+
+      ${isDone
+        ? `<button class="btn btn-ghost" onclick="goNext()">Ya leído ✓ · Ir al siguiente día →</button>`
+        : `<button class="btn btn-gold" onclick="markDone(${day.day})">Marcar como leído y avanzar</button>`}
+      ${day.day>1?`<button class="btn btn-ghost" onclick="goPrev()">← Día anterior</button>`:''}
+    </div>`;
+
+  paintSaved('reading-cont', srcId);
+}
+
+function markDone(d){
+  if(!state.completed.includes(d)) state.completed.push(d);
+  persist(); toast('¡Día '+d+' completado!');
+  setTimeout(goNext,500);
+}
+function goNext(){
+  const next=PLAN.find(p=>p.day===state.currentDay+1);
+  if(next){state.currentDay++; persist(); renderLectura(); renderPlan(); window.scrollTo(0,0);}
+  else toast('Has completado el plan inicial');
+}
+function goPrev(){
+  if(state.currentDay>1){state.currentDay--; persist(); renderLectura(); window.scrollTo(0,0);}
+}
+
+// ---------- PROGRESO ----------
+function renderProgreso(){
+  const totalCh=INDEX.reduce((s,b)=>s+b.chapters,0);
+  // capítulos leídos = los del plan completados (mapeo simple: 1 día ~ pasaje)
+  const planDone=state.completed.length;
+  const pct=((planDone/PLAN.length)*100).toFixed(0);
+
+  // libros tocados por el plan
+  const touched={};
+  state.completed.forEach(d=>{
+    const p=PLAN.find(x=>x.day===d); if(p) touched[p.ref.book]=(touched[p.ref.book]||0)+1;
+  });
+
+  const atBooks=INDEX.filter(b=>b.testament==='AT');
+  const ntBooks=INDEX.filter(b=>b.testament==='NT');
+  const bookRow=(b)=>{
+    const done=touched[b.name]||0;
+    const chips=Array.from({length:Math.min(b.chapters,14)},(_,i)=>
+      `<span class="chip${i<done?' read':''}"></span>`).join('');
+    return `<div class="book-row"><span class="name serif">${b.name}</span>
+      <span class="chips">${chips}</span>
+      <span class="frac">${done}/${b.chapters}</span></div>`;
+  };
+
+  document.getElementById('s-progreso').innerHTML=`
+    <div class="pad">
+      <h2 class="serif">Tu progreso</h2>
+      <p class="lead">El plan de lectura, día a día, como un libro que avanzas.</p>
+      <div class="stat">
+        <div><div class="lbl">Días del plan completados</div>
+          <div class="big">${planDone} <span style="font-size:16px;color:var(--ink-soft);">/ ${PLAN.length}</span></div>
+        </div>
+        <div style="text-align:right;"><div class="lbl">Avance</div>
+          <div class="big">${pct}%</div></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+
+      <div class="booklist">
+        <h4>Antiguo Testamento</h4>
+        ${atBooks.map(bookRow).join('')}
+        <h4>Nuevo Testamento</h4>
+        ${ntBooks.map(bookRow).join('')}
+      </div>
+    </div>`;
+}
+
+// ---------- RESUMEN ----------
+function renderResumen(){
+  const colors={'c-teal':'#1d9e75','c-coral':'#d85a30','c-amber':'#ba7517','c-purple':'#534ab7','c-blue':'#185fa5','c-green':'#639922'};
+  // lecturas del plan ya completadas, para revisar
+  const done=PLAN.filter(p=>state.completed.includes(p.day));
+  let revisitHtml='';
+  if(done.length){
+    revisitHtml=`
+      <h4 class="rev-h">Tus lecturas completadas</h4>
+      <p class="lead" style="margin-top:0;">Vuelve a cualquiera para revisarla.</p>
+      ${done.map(p=>`
+        <div class="day-row" onclick="openDay(${p.day})">
+          <div class="day-num done">✓</div>
+          <div class="day-info"><div class="t serif">${p.title}</div><div class="r">${p.ref.label}</div></div>
+          <span style="color:var(--gold);">›</span>
+        </div>`).join('')}
+      <div style="height:24px;"></div>`;
+  }
+  document.getElementById('s-resumen').innerHTML=`
+    <div class="pad">
+      <h2 class="serif">La historia de la Biblia</h2>
+      <p class="lead">Toda la Escritura cuenta una sola historia en seis grandes actos. Toca un acto para leer su pasaje.</p>
+      ${OVERVIEW.map((a,i)=>`
+        <div class="act act-tap" style="border-left-color:${colors[a.color]};" onclick="openLibFromOverview(${i})">
+          <h3 class="serif">${a.act}</h3>
+          <p>${a.desc}</p>
+          <div class="act-foot"><span class="bk">${a.books}</span>
+            <span class="act-go">Leer ${a.read.label} →</span></div>
+        </div>`).join('')}
+      <div style="height:8px;"></div>
+      ${revisitHtml}
+    </div>`;
+}
+function openLibFromOverview(i){
+  const a=OVERVIEW[i];
+  openChapter(a.read.book, a.read.chapter);
+}
+
+// ---------- PLAN ----------
+function renderPlan(){
+  const tab=state.planTab||'tematico';
+  let body='';
+  if(tab==='tematico'){
+    let html='', lastPhase=null;
+    PLAN.forEach(p=>{
+      if(p.phase!==lastPhase){html+=`<div class="phase-label">${p.phase}</div>`; lastPhase=p.phase;}
+      const done=state.completed.includes(p.day);
+      const cur=p.day===state.currentDay;
+      html+=`<div class="day-row" onclick="openDay(${p.day})">
+        <div class="day-num ${done?'done':cur?'current':''}">${done?'✓':p.day}</div>
+        <div class="day-info"><div class="t serif">${p.title}</div><div class="r">${p.ref.label}</div></div>
+        <span style="color:var(--gold);">›</span>
+      </div>`;
+    });
+    body=`<p class="lead">14 lecturas guiadas con explicación completa: la historia central y la vida de Jesús.</p>${html}`;
+  } else {
+    body=renderYearPlan();
+  }
+  document.getElementById('s-plan').innerHTML=`
+    <div class="pad">
+      <h2 class="serif">Plan de lectura</h2>
+      <div class="plan-tabs">
+        <button class="${tab==='tematico'?'on':''}" onclick="setPlanTab('tematico')">Temático · 14 días</button>
+        <button class="${tab==='anual'?'on':''}" onclick="setPlanTab('anual')">Toda la Biblia · 1 año</button>
+      </div>
+      ${body}
+    </div>`;
+}
+function setPlanTab(t){ state.planTab=t; persist(); renderPlan(); }
+
+function renderYearPlan(){
+  const total=PLAN_FULL.length;
+  const done=Object.keys(state.yearDone).length;
+  const pct=((done/total)*100).toFixed(1);
+  // agrupar por libro
+  let html='', lastBook=null;
+  PLAN_FULL.forEach((d,i)=>{
+    const book=d[0];
+    if(book!==lastBook){ html+=`<div class="phase-label">${book}</div>`; lastBook=book; }
+    const label = d[1]===d[2]? `${book} ${d[1]}` : `${book} ${d[1]}–${d[2]}`;
+    const isDone=!!state.yearDone[i];
+    html+=`<div class="day-row" onclick="openYearDay(${i})">
+      <div class="day-num ${isDone?'done':''}">${isDone?'✓':(i+1)}</div>
+      <div class="day-info"><div class="t serif">${label}</div><div class="r">${d[3].slice(0,60)}…</div></div>
+      <span style="color:var(--gold);">›</span>
+    </div>`;
+  });
+  return `
+    <p class="lead">Toda la Biblia en ${total} lecturas, una por día. Cada día muestra el pasaje completo y un resumen.</p>
+    <div class="stat" style="margin-bottom:14px;">
+      <div><div class="lbl">Lecturas completadas</div>
+        <div class="big">${done} <span style="font-size:16px;color:var(--ink-soft);">/ ${total}</span></div></div>
+      <div style="text-align:right;"><div class="lbl">Avance del año</div><div class="big">${pct}%</div></div>
+    </div>
+    <div class="progress-track" style="margin-bottom:8px;"><div class="progress-fill" style="width:${pct}%"></div></div>
+    ${html}`;
+}
+
+// abre un día del plan anual en el lector, con resumen arriba
+let yearReading=null; // índice del día anual que se está leyendo
+function openYearDay(i){
+  const d=PLAN_FULL[i];
+  yearReading=i;
+  state.lib.book=d[0]; state.lib.chapter=d[1]; libView='reader';
+  // marcar capítulos del rango como leídos
+  for(let c=d[1];c<=d[2];c++) state.chaptersRead[chKey(d[0],c)]=true;
+  state.yearDone[i]=true;
+  state.lastRead={type:'year', i};
+  persist();
+  renderYearReader(i); switchScreen('biblia'); window.scrollTo(0,0);
+}
+function openDay(d){ state.currentDay=d; state.lastRead={type:'plan', day:d}; persist(); renderLectura(); switchScreen('lectura'); window.scrollTo(0,0); }
+
+// ---------- BIBLIA (lectura libre) ----------
+// vista: 'library' (lista de libros) | 'chapters' (capítulos de un libro) | 'reader' (texto)
+let libView='library';
+
+function chKey(book,ch){ return book+'|'+ch; }
+function isChRead(book,ch){ return !!(state.chaptersRead[chKey(book,ch)]); }
+function totalRead(){ return Object.keys(state.chaptersRead).length; }
+
+function renderBiblia(){
+  if(libView==='reader'){ renderReader(); return; }
+  if(libView==='chapters'){ renderChapters(); return; }
+  renderLibrary();
+}
+
+function renderLibrary(){
+  const totalCh=INDEX.reduce((s,b)=>s+b.chapters,0);
+  const read=totalRead();
+  const pct=((read/totalCh)*100).toFixed(1);
+  const editing=!!state.editLibrary;
+  const at=INDEX.filter(b=>b.testament==='AT');
+  const nt=INDEX.filter(b=>b.testament==='NT');
+  const readInBook=(b)=>{let n=0;for(let c=1;c<=b.chapters;c++)if(isChRead(b.name,c))n++;return n;};
+  const bookCard=(b)=>{
+    const n=readInBook(b);
+    const full=n===b.chapters;
+    // cuadraditos de avance: uno por capítulo (máx 16 visibles para libros largos)
+    const shown=Math.min(b.chapters,16);
+    let chips='';
+    for(let c=1;c<=shown;c++) chips+=`<span class="chip${isChRead(b.name,c)?' read':''}"></span>`;
+    if(b.chapters>16) chips+=`<span class="chip-more">+${b.chapters-16}</span>`;
+    const action= editing
+      ? `openBookEditing('${b.name.replace(/'/g,"\\'")}')`
+      : `openBook('${b.name.replace(/'/g,"\\'")}')`;
+    return `<div class="lib-book ${full?'full':''} ${editing&&n>0?'editable':''}" onclick="${action}">
+      <div class="lib-top">
+        <span class="lib-name serif">${b.name}${editing&&n>0?' <span class="edit-tag">editar</span>':''}</span>
+        <span class="lib-meta">${n}/${b.chapters}${full?' ✓':''}</span>
+      </div>
+      <div class="chips">${chips}</div>
+    </div>`;
+  };
+  document.getElementById('s-biblia').innerHTML=`
+    <div class="pad">
+      <h2 class="serif">La Biblia</h2>
+      <p class="lead">${editing?'Toca un libro con avance para editar sus capítulos leídos.':'Tu avance de lectura. Toca un libro para leerlo; los cuadros marcan los capítulos leídos.'}</p>
+      <div class="stat">
+        <div><div class="lbl">Capítulos leídos</div>
+          <div class="big">${read} <span style="font-size:16px;color:var(--ink-soft);">/ ${totalCh}</span></div>
+        </div>
+        <div style="text-align:right;"><div class="lbl">Biblia completa</div>
+          <div class="big">${pct}%</div></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <button class="btn-edit ${editing?'on':''}" onclick="toggleEditLibrary()">${editing?'✓ Listo':'✎ Editar avance leído'}</button>
+      <div class="booklist">
+        <h4>Antiguo Testamento</h4>
+        <div class="lib-grid">${at.map(bookCard).join('')}</div>
+        <h4>Nuevo Testamento</h4>
+        <div class="lib-grid">${nt.map(bookCard).join('')}</div>
+      </div>
+    </div>`;
+}
+function toggleEditLibrary(){
+  state.editLibrary=!state.editLibrary;
+  renderLibrary();
+}
+function openBookEditing(name){
+  state.lib.book=name; libView='chapters'; state.editProgress=true;
+  state.editLibrary=false; persist();
+  renderChapters(); switchScreen('biblia'); window.scrollTo(0,0);
+}
+
+function openBook(name){
+  state.lib.book=name; libView='chapters'; persist();
+  renderChapters(); switchScreen('biblia'); window.scrollTo(0,0);
+}
+function renderChapters(){
+  const b=INDEX.find(x=>x.name===state.lib.book); if(!b){libView='library';return renderLibrary();}
+  const editing=!!state.editProgress;
+  let chips='';
+  for(let c=1;c<=b.chapters;c++){
+    const isRead=isChRead(b.name,c);
+    const action= editing
+      ? `toggleChapterRead('${b.name.replace(/'/g,"\\'")}',${c})`
+      : `openChapter('${b.name.replace(/'/g,"\\'")}',${c})`;
+    chips+=`<div class="ch-cell ${isRead?'read':''} ${editing?'editing':''}" onclick="${action}">${c}${editing&&isRead?'<span class="ch-x">✕</span>':''}</div>`;
+  }
+  document.getElementById('s-biblia').innerHTML=`
+    <div class="pad">
+      <div class="back" onclick="backToLibrary()">‹ Todos los libros</div>
+      <h2 class="serif">${b.name}</h2>
+      <p class="lead">${editing?'Toca un capítulo para marcarlo o desmarcarlo como leído.':b.chapters+' capítulos · toca uno para leerlo'}</p>
+      <button class="btn-edit ${editing?'on':''}" onclick="toggleEditProgress()">${editing?'✓ Listo':'✎ Editar avance leído'}</button>
+      <div class="ch-grid">${chips}</div>
+    </div>`;
+}
+function toggleEditProgress(){
+  state.editProgress=!state.editProgress;
+  renderChapters();
+}
+function toggleChapterRead(book,ch){
+  const k=chKey(book,ch);
+  if(state.chaptersRead[k]){ delete state.chaptersRead[k]; toast('Capítulo '+ch+' desmarcado'); }
+  else { state.chaptersRead[k]=true; toast('Capítulo '+ch+' marcado como leído'); }
+  persist(); renderChapters();
+}
+function backToLibrary(){ libView='library'; state.editProgress=false; renderLibrary(); window.scrollTo(0,0); }
+
+function openChapter(book,ch){
+  state.lib.book=book; state.lib.chapter=ch; libView='reader'; state.editProgress=false;
+  // marcar como leído automáticamente
+  state.chaptersRead[chKey(book,ch)]=true;
+  state.lastRead={type:'lib', book, ch};
+  persist();
+  renderReader(); switchScreen('biblia'); window.scrollTo(0,0);
+}
+function renderReader(){
+  const book=state.lib.book, ch=state.lib.chapter;
+  const b=INDEX.find(x=>x.name===book);
+  const chap=BIBLE[book] && BIBLE[book][String(ch)];
+  if(!chap){libView='chapters';return renderChapters();}
+  const src='lib|'+book+'|'+ch;
+  const verses=Object.keys(chap).map(Number).sort((a,b)=>a-b);
+  let vhtml='';
+  verses.forEach((vn,idx)=>{
+    vhtml+=`<span class="v" data-i="${idx}"><span class="vn">${vn}</span>${chap[String(vn)]} </span>`;
+  });
+  const read=isChRead(book,ch);
+  const prevCh=ch>1?ch-1:null;
+  const nextCh=ch<b.chapters?ch+1:null;
+  document.getElementById('s-biblia').innerHTML=`
+    <div class="reading">
+      <div class="back" onclick="backToChapters()">‹ ${book}</div>
+      <div class="eyebrow">Lectura libre</div>
+      <h2 class="serif">${book} ${ch}</h2>
+      <div class="ref">Reina-Valera 1960</div>
+      <div class="verses serif selectable" id="libverses" data-src="${src}">${vhtml}</div>
+      <button class="btn-destacar" onclick="destacarSeleccion()">✦ Destacar texto seleccionado</button>
+      <p class="hint-sel">Selecciona una frase con el dedo y luego toca el botón.</p>
+      ${noteFieldHtml(book+'|'+ch)}
+      <div class="toolbar">
+        <button onclick="toggleChRead()">${read?'Marcar como no leído':'Marcar leído ✓'}</button>
+      </div>
+      <div class="reader-nav">
+        ${prevCh?`<button class="btn btn-ghost" style="margin:0;" onclick="openChapter('${book.replace(/'/g,"\\'")}',${prevCh})">← ${book} ${prevCh}</button>`:'<span></span>'}
+        ${nextCh?`<button class="btn btn-gold" style="margin:0;" onclick="openChapter('${book.replace(/'/g,"\\'")}',${nextCh})">${book} ${nextCh} →</button>`:'<span></span>'}
+      </div>
+    </div>`;
+  paintSaved('libverses', src);
+}
+function backToChapters(){ libView='chapters'; renderChapters(); window.scrollTo(0,0); }
+function toggleChRead(){
+  const k=chKey(state.lib.book,state.lib.chapter);
+  if(state.chaptersRead[k]){delete state.chaptersRead[k];toast('Marcado como no leído');}
+  else{state.chaptersRead[k]=true;toast('Marcado como leído');}
+  persist(); renderReader();
+}
+
+// Lector del plan anual: muestra el rango completo de capítulos + resumen
+function renderYearReader(i){
+  const d=PLAN_FULL[i];
+  const book=d[0], c1=d[1], c2=d[2], summary=d[3];
+  const src='year|'+i;
+  const label = c1===c2? `${book} ${c1}` : `${book} ${c1}–${c2}`;
+  let vhtml='';
+  for(let c=c1;c<=c2;c++){
+    const chap=BIBLE[book] && BIBLE[book][String(c)];
+    if(!chap) continue;
+    vhtml+=`<div class="eyebrow" style="margin-top:14px;">Capítulo ${c}</div>`;
+    const verses=Object.keys(chap).map(Number).sort((a,b)=>a-b);
+    verses.forEach(vn=>{
+      vhtml+=`<span class="v"><span class="vn">${vn}</span>${chap[String(vn)]} </span>`;
+    });
+  }
+  const prev=i>0?i-1:null;
+  const next=i<PLAN_FULL.length-1?i+1:null;
+  document.getElementById('s-biblia').innerHTML=`
+    <div class="reading selectable" id="yearcont" data-src="${src}">
+      <div class="back" onclick="backToYearPlan()">‹ Plan anual</div>
+      <div class="eyebrow">Día ${i+1} de ${PLAN_FULL.length} · Plan anual</div>
+      <h2 class="serif">${label}</h2>
+      <div class="ref">Reina-Valera 1960</div>
+      <div class="reflect" style="margin:14px 0;">
+        <h3 style="font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--gold);margin:0 0 6px;">Resumen</h3>
+        <p style="margin:0;font-size:15px;line-height:1.6;">${summary}</p>
+      </div>
+      <div class="verses serif" id="yearverses">${vhtml}</div>
+      <button class="btn-destacar" onclick="destacarSeleccion()">✦ Destacar texto seleccionado</button>
+      <p class="hint-sel">Selecciona una frase con el dedo y luego toca el botón.</p>
+      ${noteFieldHtml('yearnote|'+i)}
+      <div class="reader-nav">
+        ${prev!==null?`<button class="btn btn-ghost" style="margin:0;" onclick="openYearDay(${prev})">← Día ${prev+1}</button>`:'<span></span>'}
+        ${next!==null?`<button class="btn btn-gold" style="margin:0;" onclick="openYearDay(${next})">Día ${next+1} →</button>`:'<span></span>'}
+      </div>
+    </div>`;
+  paintSaved('yearcont', src);
+}
+function backToYearPlan(){ state.planTab='anual'; libView='library'; switchScreen('plan'); renderPlan(); window.scrollTo(0,0); }
+
+// ---------- DESTACADOS (pantalla) ----------
+function renderDestacados(){
+  const el=document.getElementById('s-destacados');
+  if(!el) return;
+  if(!state.saved.length){
+    el.innerHTML=`<div class="pad">
+      <h2 class="serif">Destacados</h2>
+      <p class="lead">Aún no tienes textos destacados.</p>
+      <div class="empty">
+        <p>Mientras lees, selecciona cualquier frase con el dedo y toca <b>✦ Destacar</b>.
+        Aparecerá aquí, y podrás volver a la lectura con un toque.</p>
+      </div>
+    </div>`;
+    return;
+  }
+  // agrupar por fuente
+  const items=state.saved.slice();
+  el.innerHTML=`<div class="pad">
+    <h2 class="serif">Destacados</h2>
+    <p class="lead">${items.length} texto${items.length>1?'s':''} guardado${items.length>1?'s':''}. Toca para volver a la lectura.</p>
+    ${items.map(it=>`
+      <div class="hl-card">
+        <div class="hl-quote serif" onclick="goToSource('${it.src}')">“${escapeHtml(it.text)}”</div>
+        <div class="hl-foot">
+          <span class="hl-ref" onclick="goToSource('${it.src}')">${escapeHtml(it.srcLabel)} →</span>
+          <button class="hl-del" onclick="removeHighlight(${it.id})" aria-label="Eliminar">✕</button>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function goToSource(src){
+  if(src.startsWith('plan|')){
+    const d=+src.split('|')[1];
+    openDay(d);
+  } else if(src.startsWith('lib|')){
+    const [,book,ch]=src.split('|');
+    openChapter(book, +ch);
+  } else if(src.startsWith('year|')){
+    openYearDay(+src.split('|')[1]);
+  }
+}
+
+// ---------- NAV ----------
+function switchScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+name).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.s===name));
+}
+document.querySelectorAll('nav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    // al tocar "Biblia" en el menú, volver siempre a la lista de libros
+    if(b.dataset.s==='biblia'){
+      libView='library';
+      state.editProgress=false; state.editLibrary=false;
+      renderLibrary();
+      window.scrollTo(0,0);
+    }
+    // al tocar "Lectura", refrescar para mostrar la tarjeta de retomar actualizada
+    if(b.dataset.s==='lectura'){ renderLectura(); window.scrollTo(0,0); }
+    switchScreen(b.dataset.s);
+  });
+});
+
+// ---------- AJUSTES ----------
+function openSettings(){
+  const m=document.getElementById('settings-modal');
+  document.getElementById('settings-body').innerHTML=`
+    <button class="close-x" onclick="closeSettings()">×</button>
+    <h2 class="serif">Ajustes</h2>
+    <div class="set-row">
+      <span class="lab">Tamaño de letra</span>
+      <div class="size-ctrl">
+        <button onclick="changeFont(-1.5)">A−</button>
+        <span class="val" id="font-val">${Math.round(state.fontSize)} px</span>
+        <button onclick="changeFont(1.5)">A+</button>
+      </div>
+    </div>
+    <div class="set-row row-flex">
+      <div><span class="lab" style="margin:0;">Modo noche</span>
+        <div class="desc" style="margin:2px 0 0;">Fondo oscuro para leer de noche</div></div>
+      <button class="toggle ${state.night?'on':''}" onclick="toggleNight()"></button>
+    </div>
+    <div class="set-row">
+      <span class="lab">Respaldo de tus datos</span>
+      <div class="desc">Guarda o restaura tus destacados, notas y avance. Útil al cambiar de teléfono.</div>
+      <button class="set-btn solid" onclick="exportData()">⬇ Exportar mis datos</button>
+      <button class="set-btn" onclick="document.getElementById('import-file').click()">⬆ Importar datos</button>
+      <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)">
+    </div>
+    <div class="set-row">
+      <div class="desc" style="text-align:center;">Mi Biblia · Reina-Valera 1960<br>Tus datos se guardan solo en este dispositivo.</div>
+    </div>`;
+  m.classList.add('show');
+}
+function closeSettings(){ document.getElementById('settings-modal').classList.remove('show'); }
+function changeFont(delta){
+  state.fontSize=Math.min(28, Math.max(14, (state.fontSize||18.5)+delta));
+  persist(); applyPrefs();
+  const v=document.getElementById('font-val'); if(v) v.textContent=Math.round(state.fontSize)+' px';
+}
+function toggleNight(){
+  state.night=!state.night; persist(); applyPrefs();
+  const t=document.querySelector('.toggle'); if(t) t.classList.toggle('on', state.night);
+}
+
+// ---------- RESPALDO ----------
+function exportData(){
+  const data=JSON.stringify(state, null, 2);
+  const blob=new Blob([data], {type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const fecha=new Date().toISOString().slice(0,10);
+  a.href=url; a.download='mi-biblia-respaldo-'+fecha+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast('Respaldo descargado');
+}
+function importData(ev){
+  const file=ev.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const imported=JSON.parse(reader.result);
+      if(!imported || typeof imported!=='object') throw new Error('formato');
+      state=Object.assign(state, imported);
+      persist(); applyPrefs(); renderAll();
+      closeSettings();
+      toast('Datos restaurados ✓');
+    }catch(e){ toast('Archivo no válido'); }
+  };
+  reader.readAsText(file);
+}
+
+// ---------- BUSCAR ----------
+function openSearch(){
+  switchScreen('buscar');
+  renderSearch();
+  setTimeout(()=>{const inp=document.getElementById('search-input'); if(inp) inp.focus();}, 100);
+}
+function renderSearch(results, query){
+  let body='';
+  if(results){
+    if(results.length===0){
+      body=`<p class="lead">Sin resultados para "${query}". Prueba con otra palabra.</p>`;
+    } else {
+      body=`<p class="lead">${results.length} resultado${results.length>1?'s':''}${results.length>=200?' (mostrando los primeros 200)':''} para "${query}"</p>`;
+      results.forEach(r=>{
+        body+=`<div class="sr-item" onclick="openChapter('${r.book.replace(/'/g,"\\'")}',${r.ch})">
+          <div class="sr-ref">${r.book} ${r.ch}:${r.vn}</div>
+          <div class="sr-text">${r.preview}</div>
+        </div>`;
+      });
+    }
+  } else {
+    body=`<p class="lead">Escribe una palabra o frase para buscarla en toda la Biblia. También puedes buscar una cita como "Juan 3:16".</p>`;
+  }
+  document.getElementById('s-buscar').innerHTML=`
+    <div class="pad">
+      <h2 class="serif">Buscar</h2>
+      <div class="search-box">
+        <input id="search-input" type="search" placeholder="Palabra, frase o cita…" value="${query||''}"
+          onkeydown="if(event.key==='Enter')doSearch()">
+        <button onclick="doSearch()">Buscar</button>
+      </div>
+      ${body}
+    </div>`;
+}
+function doSearch(){
+  const q=(document.getElementById('search-input').value||'').trim();
+  if(q.length<2){ toast('Escribe al menos 2 letras'); return; }
+  const cita=q.match(/^([1-3]?\s?[a-záéíóúñ]+)\s+(\d+)(?::(\d+))?$/i);
+  if(cita){
+    const bookQ=cita[1].trim().toLowerCase();
+    const found=INDEX.find(b=>b.name.toLowerCase()===bookQ || b.name.toLowerCase().startsWith(bookQ));
+    if(found){ openChapter(found.name, Math.min(+cita[2], found.chapters)); return; }
+  }
+  const needle=q.toLowerCase();
+  const results=[];
+  for(const book of INDEX){
+    const bdata=BIBLE[book.name]; if(!bdata) continue;
+    for(const chKey of Object.keys(bdata)){
+      const verses=bdata[chKey];
+      for(const vKey of Object.keys(verses)){
+        const text=verses[vKey];
+        if(text.toLowerCase().includes(needle)){
+          const re=new RegExp('('+needle.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig');
+          let prev=text.length>140? text.slice(0,140)+'…' : text;
+          prev=prev.replace(re,'<mark>$1</mark>');
+          results.push({book:book.name, ch:+chKey, vn:+vKey, preview:prev});
+          if(results.length>=200){ renderSearch(results, q); return; }
+        }
+      }
+    }
+  }
+  renderSearch(results, q);
+}
+
+// ---------- NOTA PERSONAL ----------
+function noteKey(){ return state.lib.book+'|'+state.lib.chapter; }
+function saveNoteKey(key, val){ if(val&&val.trim()) state.notes[key]=val; else delete state.notes[key]; persist(); }
+function saveNote(val){ saveNoteKey(noteKey(), val); }
+// bloque HTML reutilizable del campo de nota para cualquier clave
+function noteFieldHtml(key){
+  const val=(state.notes[key]||'').replace(/</g,'&lt;');
+  return `<div class="section" style="border:none;">
+    <h3>Mi nota personal</h3>
+    <textarea class="note-box" placeholder="Escribe aquí tus reflexiones…" oninput="saveNoteKey('${key.replace(/'/g,"\\'")}', this.value)">${val}</textarea>
+  </div>`;
+}
+
+function renderAll(){ renderLectura(); renderBiblia(); renderDestacados(); renderResumen(); renderPlan(); }
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
